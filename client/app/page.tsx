@@ -1,26 +1,30 @@
 "use client"
-import React from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+
+const users = [ 
+  {id: 1, name: 'elon'},
+  {id: 2, name: 'bezos'},
+  {id: 3, name: 'buffet'},
+];
 
 export default function Home() {
   const router = useRouter();
-  const users = ['Bezos', 'Elon', 'Buffet'];
-  const [userName, setUserName] = React.useState('');
-  console.log(userName);
+  const [userName, setUserName] = useState('');
 
-  const join = () => {
-    if (users.includes(userName)) {
-      router.push('/home/');
-      console.log('seccessful');
-      return;
-    }
+    const join = () => {
+    const result = users.find((u) => u.name === userName.toLowerCase());
 
-    alert('User not found');
-    setUserName('');
+    if (!result) {
+      setUserName('');
+      return alert('User not found');
+    } 
+    
+    router.push(`/home/${result.id}`);
+    return;
   }
 
-
-
+  console.log(userName)
 
   return (
     <main className="flex flex-col">

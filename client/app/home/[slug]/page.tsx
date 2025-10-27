@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import useSocket from "@/hooks/useSocket";
+import { usePathname } from "next/navigation";
 
-import bezosImg from "../../assets/images/img1.jpg";
-import elonImg from "../../assets/images/img2.jpg";
-import buffetImg from "../../assets/images/img3.jpg";
+import bezosImg from "../../../assets/images/img1.jpg";
+import elonImg from "../../../assets/images/img2.jpg";
+import buffetImg from "../../../assets/images/img3.jpg";
 
 const SERVER_URL = {
   URL: "http://localhost:4000",
@@ -21,9 +22,34 @@ const posts = [
 function ProfilePage() {
   const socket = useSocket(SERVER_URL.URL);
   const [showModal, setShowModal] = useState(false);
+  const pathname = usePathname();
+  const [notifications, setNotifications] = useState<string[]>([]);
+  const userId = Number(pathname[pathname.length - 1]); 
+  const currentUser = posts.find((u) => u.id === userId);
 
-  const sendMessage = () => {
-    socket.current?.emit("newMessage", "Hello from client!");
+
+  useEffect(() => {
+    socket.current?.emit("register", userId);
+
+
+    socket.current?.on("newNotify", (message) =>{
+      setNotifications((prev) => [...prev, message]);
+      console.log(notifications);
+    })
+
+  }, []);
+
+  
+  const sendNotify = (data: {type: string, rec_id: number, rec_name: string}) => {
+      const sender_user_id = pathname[pathname.length - 1]
+      const sender_name = currentUser?.name || "Unknown";;
+
+      console.log(`${data.type} post ${sender_user_id} ${sender_name} to ${data.rec_id}`)
+      socket.current?.emit("newNotify", {
+        ...data, 
+        senderId: sender_user_id,
+        senderName: sender_name,
+      });
   };
 
   return (
@@ -61,7 +87,20 @@ function ProfilePage() {
                 Notifications
               </div>
               <div className="p-4 text-sm text-gray-600">
+                {notifications.length === 0 ? (
                 <p>No new notifications</p>
+                ) : (
+                    <ul className="space-y-2 max-h-48 overflow-auto">
+                      {notifications.map((note, idx) => (
+                        <li
+                          key={idx}
+                          className="p-2 rounded-lg bg-gray-50 border border-gray-100 text-gray-800"
+                        >
+                          {note}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
               </div>
             </div>
           )}
@@ -70,28 +109,28 @@ function ProfilePage() {
 
       {/* Posts Section */}
       <div className="max-w-md mx-auto mt-8 space-y-6">
-        {posts.map((post) => (
+        {posts.map((user) => (
           <div
-            key={post.id}
+            key={user.id}
             className="bg-white rounded-2xl shadow-md overflow-hidden"
           >
             {/* Post Header */}
             <div className="flex items-center p-3">
               <Image
-                src={post.postImg}
-                alt={post.name}
+                src={user.postImg}
+                alt={user.name}
                 width={40}
                 height={40}
                 className="rounded-full object-cover"
               />
-              <p className="ml-3 font-semibold text-gray-800">{post.name}</p>
+              <p className="ml-3 font-semibold text-gray-800">{user.name}</p>
             </div>
 
             {/* Post Image */}
             <div className="relative w-full h-72">
               <Image
-                src={post.postImg}
-                alt={post.name}
+                src={user.postImg}
+                alt={user.name}
                 fill
                 className="object-cover"
                 priority
@@ -101,7 +140,7 @@ function ProfilePage() {
             {/* Post Actions */}
             <div className="flex items-center justify-around py-3 text-gray-700">
               <button
-                onClick={sendMessage}
+                onClick={() => sendNotify({type: "❤️like", rec_name: user.name, rec_id: user.id})}
                 className="flex items-center gap-1 hover:text-red-500 transition"
               >
                 {/* Like Icon */}
@@ -122,7 +161,10 @@ function ProfilePage() {
               </button>
 
               {/* Comment Icon */}
-              <button className="flex items-center gap-1 hover:text-blue-500 transition">
+              <button 
+                onClick={() => sendNotify({type: "💬comment", rec_name: user.name, rec_id: user.id})}
+                className="flex items-center gap-1 hover:text-blue-500 transition"
+                >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -140,7 +182,10 @@ function ProfilePage() {
               </button>
 
               {/* Share Icon */}
-              <button className="flex items-center gap-1 hover:text-green-500 transition">
+              <button 
+                onClick={() => sendNotify({type: "⬆️share", rec_name: user.name, rec_id: user.id})}
+                className="flex items-center gap-1 hover:text-green-500 transition"
+                >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
